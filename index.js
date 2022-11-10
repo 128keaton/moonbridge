@@ -33,9 +33,9 @@ app.use(cors({
     origin: '*'
 }));
 
-const getPrinterStatus = (printer) => {
+const getPrinterStatus = (printer, extended = false) => {
     //  /api/printer
-    return axios.get(`${printer}/api/printer`)
+    return axios.get(extended ? `${printer}/printer/objects/query?webhooks\&virtual_sdcard` : `${printer}/api/printer`)
         .then(res => res.data)
         .catch(err => {
             console.log('Error: ', err.message);
@@ -45,18 +45,28 @@ const getPrinterStatus = (printer) => {
 
 app.get('/', (req, res) => {
     const printerNames = printers.map(p => p.name);
+    let partialArrayResponse = [];
 
-    Promise.all(printers.map(printer => {
-        return getPrinterStatus(printer.endpoint)
-    })).then(respArray => {
+    Promise.all(printers.map(printer => getPrinterStatus(printer.endpoint)))
+        .then(respArray => {
 
-        respArray = respArray.filter(r => !!r);
+            respArray = respArray.filter(r => !!r);
 
-        respArray.forEach((resp, index) => {
-            resp.name = printerNames[index];
-        });
+            respArray.forEach((resp, index) => {
+                resp.name = printerNames[index];
+            });
 
-        res.send(respArray);
+            partialArrayResponse = respArray;
+
+            return Promise.all(printers.map(printer => getPrinterStatus(printer.endpoint, true)));
+        }).then(respArray => {
+            respArray = respArray.filter(r => !!r);
+
+            partialArrayResponse.forEach((o, index) => {
+                o.extended = respArray[index];
+            });
+
+            res.send(partialArrayResponse);
     })
 });
 
