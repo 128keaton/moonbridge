@@ -28,8 +28,10 @@ try {
 }
 
 
-const app = express()
-
+const app = express();
+app.use(cors({
+    origin: '*'
+}));
 
 const getPrinterStatus = (printer) => {
     //  /api/printer
@@ -58,7 +60,6 @@ app.get('/', (req, res) => {
     })
 });
 
-app.use(cors())
 
 app.listen(port, () => {
     console.log(printers.length, "printers");
