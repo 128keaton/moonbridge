@@ -4,9 +4,10 @@ const axios = require('axios');
 const express = require('express')
 const cors = require('cors');
 
-
 let printers = [];
 let port = 3000;
+
+let cert, privKey, https = null;
 
 
 try {
@@ -22,6 +23,12 @@ try {
 
     if (parsedConfig.hasOwnProperty('port'))
         port = parsedConfig.port;
+
+    if (parsedConfig.hasOwnProperty('ssl')) {
+        https = require('https');
+        privKey = fs.readFileSync( parsedConfig.privateKey);
+        cert = fs.readFileSync(parsedConfig.certificate);
+    }
 
 } catch (err) {
     console.error(err);
@@ -71,7 +78,19 @@ app.get('/', (req, res) => {
 });
 
 
-app.listen(port, () => {
-    console.log(printers.length, "printers");
-    console.log(`Moonbridge listening on port ${port}`);
-});
+if (!!privKey && !!cert && !!https) {
+    https.createServer({
+        key: privKey,
+        cert: cert
+    }, app).listen(port, () => {
+        console.log(printers.length, "printers");
+        console.log(`Moonbridge listening on port ${port} with SSL!`);
+    });
+} else {
+    app.listen(port, () => {
+        console.log(printers.length, "printers");
+        console.log(`Moonbridge listening on port ${port}`);
+    });
+
+}
+
